@@ -1,0 +1,13 @@
+{
+  "name": "HandWrite Pro",
+  "description": "Professional AI-powered handwritten text recognition app supporting Urdu, Arabic, Pashto, and more. Convert handwritten notes to editable text, translate, and export to PDF/Word.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "OCR",
+    "Translation",
+    "Document Management",
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
