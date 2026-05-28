@@ -28,6 +28,8 @@ async function startServer() {
       // Process single page OCR logic
       const processPage = async (imageData: string, pageIdx: number) => {
         const base64Data = imageData.split(',')[1] || imageData;
+        const isPdf = imageData.includes("application/pdf") || base64Data.startsWith("JVBERi");
+        const mimeType = isPdf ? "application/pdf" : "image/jpeg";
         const prompt = `
           Perform highly accurate Advanced OCR on this handwritten letter/page (Page ${pageIdx + 1}).
           Input Language: ${options.targetLanguage || 'Detect Automatically'}
@@ -41,7 +43,7 @@ async function startServer() {
           ${options.translateTo ? `Translate the transcribed text into: ${options.translateTo}` : ""}
           
           Important instructions:
-          1. Act as an expert transcribing a personal handwritten letter ("khat").
+          1. Act as an expert transcribing a personal handwritten letter ("khat") or document.
           2. Return ONLY the transcribed/translated text. Absolutely no conversational intro, greetings, or meta-explanations.
           3. For Persian/Urdu/Pashto/Arabic (RTL texts), use proper Unicode Nastaliq or standard Arabic script context and retain appropriate punctuation.
         `;
@@ -50,7 +52,7 @@ async function startServer() {
           model: modelName,
           contents: [
             prompt,
-            { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
+            { inlineData: { data: base64Data, mimeType: mimeType } },
           ],
           config: {
             temperature: 0.1, // Faster and more deterministic OCR parsing
@@ -140,6 +142,41 @@ async function startServer() {
     } catch (err: any) {
       console.error(err);
       res.status(500).json({ error: err.message || "Translation failed" });
+    }
+  });
+
+  // API Route: Improve Handwriting & Text Style
+  app.post("/api/gemini/improve", async (req, res) => {
+    try {
+      const { text, language } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: "Missing text parameter" });
+      }
+
+      const modelName = "gemini-3.5-flash";
+      const prompt = `
+        You are an elite linguistic expert and professional calligraphy coach.
+        Analyze this document text transcribed from raw handwriting in the language: "${language || 'Automatic'}".
+        Deliver a highly polished response with these two distinct parts, formatted with simple clean HTML (e.g., using <strong>, <ul>, <li> tags):
+        
+        1. <strong>[REFINED DOCUMENT COPY]</strong>: An upgraded, beautifully styled, grammatically pristine and elegantly punctuated copy of the original text.
+        2. <strong>[CALLIGRAPHY & PENMANSHIP IMPROVEMENT SUGGESTIONS]</strong>: 3 key elegant, encouraging bullet points with actionable advice on spacing, slant, cursive alignment, or stroke consistency to improve the penmanship of this handwriting style next time.
+        
+        Important: Return ONLY the HTML structured text response. Do NOT add any extra introductory conversational sentences or footnotes. Speak in a helpful and inspiring tone.
+        
+        Input Text:
+        ${text}
+      `;
+
+      const result = await ai.models.generateContent({
+        model: modelName,
+        contents: prompt,
+      });
+
+      res.json({ text: result.text?.trim() || "" });
+    } catch (err: any) {
+      console.error(err);
+      res.status(500).json({ error: err.message || "Improvement failed" });
     }
   });
 

@@ -1,4 +1,4 @@
-export type Language = 'Urdu' | 'English' | 'Pashto' | 'Hindi' | 'Persian' | 'Arabic' | 'Chinese' | 'Turkish';
+export type Language = 'Urdu' | 'English' | 'Pashto' | 'Hindi' | 'Persian' | 'Arabic' | 'Chinese' | 'Turkish' | 'French';
 
 export interface WritingStyle {
   id: string;
@@ -15,6 +15,7 @@ export const LANGUAGES: { id: Language; label: string; flag: string }[] = [
   { id: 'Hindi', label: 'Hindi', flag: '🇮🇳' },
   { id: 'Chinese', label: 'Chinese', flag: '🇨🇳' },
   { id: 'Turkish', label: 'Turkish', flag: '🇹🇷' },
+  { id: 'French', label: 'French', flag: '🇫🇷' },
 ];
 
 export const WRITING_STYLES: Record<Language, WritingStyle[]> = {
@@ -72,5 +73,9 @@ export const WRITING_STYLES: Record<Language, WritingStyle[]> = {
   Turkish: [
     { id: 'latin', label: 'Standard Turkish Latin', nativeLabel: 'Standart Latin' },
     { id: 'calligraphy', label: 'Turkish Calligraphy', nativeLabel: 'Güzel Yazı' },
+  ],
+  French: [
+    { id: 'standard', label: 'Standard French Latin', nativeLabel: 'Lettres Modèle' },
+    { id: 'cursive', label: 'French Cursive (Écriture cursive)', nativeLabel: 'Cursive Scolaire' },
   ],
 };
