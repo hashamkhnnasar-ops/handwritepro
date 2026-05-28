@@ -1,6 +1,6 @@
 import express from "express";
 import path from "path";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 
 async function startServer() {
@@ -19,8 +19,18 @@ async function startServer() {
     }
   });
 
+  // Middleware to check if GEMINI_API_KEY is configured
+  const checkApiKey = (req: any, res: any, next: any) => {
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(403).json({
+        error: "GEMINI_API_KEY is not configured. Please open the 'Settings > Secrets' panel in Google AI Studio, add 'GEMINI_API_KEY' with your valid API Key, and save changes."
+      });
+    }
+    next();
+  };
+
   // API Route: OCR and Convert
-  app.post("/api/gemini/convert", async (req, res) => {
+  app.post("/api/gemini/convert", checkApiKey, async (req, res) => {
     try {
       const { images, image, options, index = 0 } = req.body;
       const modelName = "gemini-3.5-flash"; // Valid list model under guideline
@@ -56,6 +66,9 @@ async function startServer() {
           ],
           config: {
             temperature: 0.1, // Faster and more deterministic OCR parsing
+            thinkingConfig: {
+              thinkingLevel: ThinkingLevel.MINIMAL // Incredibly fast - disables reasoning time for pure OCR layout speed
+            }
           }
         });
 
@@ -83,7 +96,7 @@ async function startServer() {
   });
 
   // API Route: Smart Correct
-  app.post("/api/gemini/correct", async (req, res) => {
+  app.post("/api/gemini/correct", checkApiKey, async (req, res) => {
     try {
       const { text, language } = req.body;
       const modelName = "gemini-3.5-flash";
@@ -101,6 +114,11 @@ async function startServer() {
       const result = await ai.models.generateContent({
         model: modelName,
         contents: prompt,
+        config: {
+          thinkingConfig: {
+            thinkingLevel: ThinkingLevel.MINIMAL // Skip thinking latency to correct text instantly
+          }
+        }
       });
 
       res.json({ text: result.text?.trim() || "" });
@@ -111,7 +129,7 @@ async function startServer() {
   });
 
   // API Route: Translate Text
-  app.post("/api/gemini/translate", async (req, res) => {
+  app.post("/api/gemini/translate", checkApiKey, async (req, res) => {
     try {
       const { text, targetLanguage } = req.body;
       if (!text || !targetLanguage) {
@@ -136,6 +154,11 @@ async function startServer() {
       const result = await ai.models.generateContent({
         model: modelName,
         contents: prompt,
+        config: {
+          thinkingConfig: {
+            thinkingLevel: ThinkingLevel.MINIMAL // Instantaneous translation processing
+          }
+        }
       });
 
       res.json({ text: result.text?.trim() || "" });
@@ -146,7 +169,7 @@ async function startServer() {
   });
 
   // API Route: Improve Handwriting & Text Style
-  app.post("/api/gemini/improve", async (req, res) => {
+  app.post("/api/gemini/improve", checkApiKey, async (req, res) => {
     try {
       const { text, language } = req.body;
       if (!text) {
@@ -171,6 +194,11 @@ async function startServer() {
       const result = await ai.models.generateContent({
         model: modelName,
         contents: prompt,
+        config: {
+          thinkingConfig: {
+            thinkingLevel: ThinkingLevel.MINIMAL // Disable reasoning latency for ultra-fast styling outputs
+          }
+        }
       });
 
       res.json({ text: result.text?.trim() || "" });

@@ -330,8 +330,8 @@ export default function App() {
 
     const newPages: ScannedPage[] = [];
     const options = {
-      maxSizeMB: 0.3, 
-      maxWidthOrHeight: 1400, 
+      maxSizeMB: 0.25, 
+      maxWidthOrHeight: 1200, 
       useWebWorker: true,
     };
 
@@ -444,11 +444,12 @@ export default function App() {
         origin: { y: 0.6 },
         colors: ['#06b6d4', '#2563eb', '#10b981']
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      const errMsg = error?.message || "OCR Connection failed.";
       alert(appUiLanguage === 'Urdu' 
-        ? "تصدیق کریں: اسکیننگ کا کام نہیں ہو سکا۔ برائے مہربانی انٹرنیٹ کا کنکشن چیک کریں۔"
-        : "OCR Conversion failed. Ensure you have network connectivity and check browser console logs."
+        ? `تصدیق کریں: اسکیننگ کا کام نہیں ہو سکا۔ \n\nتفصیل: ${errMsg}`
+        : `OCR Conversion failed.\n\nDetails: ${errMsg}`
       );
     } finally {
       setProcessing(false);
