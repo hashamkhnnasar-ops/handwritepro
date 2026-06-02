@@ -2,6 +2,24 @@ import { jsPDF } from "jspdf";
 import { saveAs } from "file-saver";
 
 /**
+ * Universal safe filename generator which preserves English, numbers, Urdu, and Arabic characters.
+ * Ensures that if a title contains only emotions/symbols, it safely falls back to a clean default name
+ * instead of an underscore or empty string (which mobile operating systems block or corrupt).
+ */
+const sanitizeFilename = (rawTitle: string, defaultName: string = "document"): string => {
+  if (!rawTitle) return defaultName;
+  // Preserve Arabic/Urdu unicode range characters \u0600-\u06ff, \u0750-\u077f, \u08a0-\u08ff, word chars, and spaces
+  let clean = rawTitle.replace(/[^\w\s\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF-]/gi, '_').trim();
+  clean = clean.replace(/\s+/g, '_'); // Translate spaces to single underscores
+  
+  // If result is empty or entirely composed of underscores, provide the safe default
+  if (!clean || clean.replace(/_/g, '') === '') {
+    return defaultName;
+  }
+  return clean;
+};
+
+/**
  * Robust, Sandbox-Proof High-Fidelity PDF Exporter.
  * Renders document layouts on a high-definition (2x standard size) canvas element.
  * This guarantees 100% correct font-shaping & character joining (including Nastaliq, Arabic, Pashto,
@@ -242,16 +260,94 @@ export const exportToPDF = async (
   }
 
   // 7. Save PDF locally using browser blob trigger (Guarantees bypass of sandbox blocking)
+  const safeFilename = sanitizeFilename(title, "transcription");
+  const finalPdfName = `${safeFilename}.pdf`;
+
   try {
     const pdfBlob = pdf.output("blob");
-    saveAs(pdfBlob, `${title.toLowerCase().replace(/[^a-z0-9]+/g, "_")}.pdf`);
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      try {
+        const file = new File([pdfBlob], finalPdfName, { type: "application/pdf" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: title || "Transcription PDF",
+            text: "HandWrite Pro - OCR Digitized Document PDF",
+          });
+          return;
+        }
+      } catch (shareErr) {
+        console.warn("Mobile file sharing via Web Share API failed, trying direct-link anchor:", shareErr);
+      }
+    }
+
+    // Default highly compatible fallback anchor download bypasses file-saver errors
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = finalPdfName;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 150);
+
   } catch (error) {
     console.error("PDF Blob generation failed, attempting standard document download backup:", error);
-    pdf.save(`${title.toLowerCase().replace(/[^a-z0-9]+/g, "_")}.pdf`);
+    try {
+      pdf.save(finalPdfName);
+    } catch (saveErr) {
+      alert("Device download blocked. Please copy the text directly or take a screenshot.");
+    }
   }
 };
 
-export const exportToTXT = (text: string, filename: string = "document.txt") => {
+export const exportToTXT = async (text: string, filename: string = "document.txt") => {
+  const baseName = filename.replace(/\.txt$/i, "");
+  const safeFilename = sanitizeFilename(baseName, "transcription") + ".txt";
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  saveAs(blob, filename);
+  
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  if (isMobile) {
+    try {
+      const file = new File([blob], safeFilename, { type: "text/plain" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "Transcription TXT",
+          text: "HandWrite Pro - Digitized Text",
+        });
+        return;
+      } else if (navigator.share) {
+        await navigator.share({
+          title: safeFilename,
+          text: text,
+        });
+        return;
+      }
+    } catch (e) {
+      console.warn("Mobile text sharing failed, trying direct anchor download:", e);
+    }
+  }
+
+  // Fallback to standard anchor element to download on desktop and conventional platforms
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = safeFilename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 150);
+  } catch (err) {
+    console.error("Direct download anchor failed, using file-saver backup:", err);
+    saveAs(blob, safeFilename);
+  }
 };
