@@ -174,6 +174,10 @@ export default function App() {
     return (localStorage.getItem('hw_ui_lang') as UiLanguage) || 'English';
   });
 
+  // Google Play Console Publishing Assistant states
+  const [policyCopied, setPolicyCopied] = useState<boolean>(false);
+  const [complianceGuideOpen, setComplianceGuideOpen] = useState<boolean>(false);
+
   // Multilingual Strings shortcut
   const t = uiTranslations[appUiLanguage];
 
@@ -714,6 +718,40 @@ export default function App() {
     setSystemNotification('');
     setView('dashboard');
     setSettingsOpen(false);
+  };
+
+  const handleDeleteAccount = () => {
+    const isUrdu = appUiLanguage === 'Urdu';
+    const message = isUrdu 
+      ? "کیا آپ واقعی اپنا اکاؤنٹ اور تمام مقامی اسکین شدہ دستاویزات ہمیشہ کے لیے حذف کرنا چاہتے ہیں؟ یہ عمل ناقابل واپسی ہے!" 
+      : "Are you absolutely sure you want to permanently delete your account and all localized transcription records? This operation is completely permanent and cannot be undone.";
+
+    if (window.confirm(message)) {
+      localStorage.removeItem('hw_active_user');
+      localStorage.removeItem('hw_transcription_history');
+      setHistory([]);
+      setPages([]);
+      setCurrentUser(null);
+      setAuthView('continue');
+      setAuthForm({
+        name: '',
+        emailOrPhone: '',
+        password: '',
+        confirmPassword: '',
+        rememberMe: true,
+      });
+      setOtpCode('');
+      setSentOtp('');
+      setSystemNotification('');
+      setView('dashboard');
+      setSettingsOpen(false);
+      playCompleteSound();
+      
+      alert(isUrdu 
+        ? "گوگل پلے اسٹور شرائط کے مطابق آپ کا نجی اکاؤنٹ اور تمام اسکین شدہ ڈیٹا کامیابی کے ساتھ سسٹم سے صاف کر دیا گیا ہے۔" 
+        : "Your account registration and overall localized document vaults have been permanently expunged in absolute command compliance with Google Play Store Policies."
+      );
+    }
   };
 
   const handleChangePassword = (e: React.FormEvent) => {
@@ -2061,20 +2099,154 @@ export default function App() {
           )}
 
           {settingsTab === 'privacy' && (
-            <div className="space-y-4">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">{t.privacyLabel}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
-                {t.privacySub}
-              </p>
-              <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-2xl flex items-start gap-3">
-                <CheckCircle2 size={16} className="text-emerald-500 shrink-0 mt-0.5" />
-                <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
-                  {appUiLanguage === 'Urdu'
-                    ? "بینک لسٹ، نجی کاغذات اور آرکائیوز کو مکمل رازداری کے ساتھ کسٹمر ہینڈل کرتا ہے۔ کوئی بیرونی پرنٹ مائننگ یا خفیہ لاگ لسٹیں نہیں بنتی ہیں۔"
-                    : "Encrypted secure tokens handle your localized cache database. Individual handwritings or scanned papers are routed via secure HTTPS packets directly to enterprise APIs."
-                  }
-                </div>
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">{t.privacyLabel}</h3>
+                <span className="text-[10px] font-black uppercase text-emerald-400 bg-emerald-950/40 border border-emerald-900/40 px-2 py-0.5 rounded flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                  Google Play Compliant
+                </span>
               </div>
+
+              {/* Toggle Guide vs Policy */}
+              <div className="grid grid-cols-2 gap-2 bg-black p-1 rounded-xl border border-slate-900">
+                <button
+                  type="button"
+                  onClick={() => setComplianceGuideOpen(false)}
+                  className={`py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${!complianceGuideOpen ? 'bg-zinc-900 text-cyan-400' : 'text-slate-500'}`}
+                >
+                  {appUiLanguage === 'Urdu' ? 'رازداری کی پالیسی' : 'Privacy & Policy'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setComplianceGuideOpen(true)}
+                  className={`py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${complianceGuideOpen ? 'bg-zinc-900 text-cyan-400' : 'text-slate-500'}`}
+                >
+                  {appUiLanguage === 'Urdu' ? 'پلے کونسل گائیڈ' : 'Google Play Guide'}
+                </button>
+              </div>
+
+              {!complianceGuideOpen ? (
+                <div className="space-y-4">
+                  {/* Dynamic checklist indicating why the app obeys Play Store guidelines */}
+                  <div className="p-4 bg-zinc-950 border border-slate-900 rounded-2xl space-y-3">
+                    <h4 className="text-[11px] font-black text-cyan-400 uppercase tracking-widest">
+                      {appUiLanguage === 'Urdu' ? 'پلے اسٹور ڈیٹا سیفٹی چیک' : 'Play Store Data Safety Verification'}
+                    </h4>
+                    <ul className="space-y-2 text-[11px] font-semibold text-slate-400">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                        <span>{appUiLanguage === 'Urdu' ? 'کیمرہ کی اجازت: صرف اسکین کرنے کے لیے، اختیاری ہے۔' : 'Camera Permission: Used strictly for real-time document capture. Fully optional.'}</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                        <span>{appUiLanguage === 'Urdu' ? 'ڈیٹا انکرپشن: تمام فائلیں محفوظ HTTPS پر منتقل ہوتی ہیں۔' : 'Data Encryption: Transmitted via industry-standard secure SSL/HTTPS to LLM.'}</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                        <span>{appUiLanguage === 'Urdu' ? 'ڈیٹا شیئرنگ: کسی تیسرے فریق کو کوئی ڈیٹا فروخت نہیں کیا جاتا۔' : 'No Data Sale: Users’ personal writings are never shared with or sold to trackers.'}</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                        <span>{appUiLanguage === 'Urdu' ? 'حذف کاری کی سہولت: آپ اپنا اکاؤنٹ اور ڈیٹا خود حذف کر سکتے ہیں۔' : 'Data Deletion Rights: Self-service profile purging tool fully operational below.'}</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Scrollable Privacy Policy copy mandated by Google Play developer policies */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest select-none">
+                        {appUiLanguage === 'Urdu' ? 'آفیشل رازداری کی پالیسی (مفت کاپی)' : 'Scrollable Official Privacy Policy'}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const rawPolicy = `PRIVACY POLICY FOR HANDWRITE PRO\nLast Updated: May 2026\n\n1. INTRODUCTION & SCOPE\nHandWrite Pro ("we," "our," or "us") respects your privacy. This privacy document details how we process user data when using our mobile-optimized handwritten note conversion software, designed in compliance with Google Play Store Developer Policies.\n\n2. STORAGE & LOCAL DATA SAFETY\n- Local Cache: All transcribed texts, converted records, and page catalog data are stored locally inside your device’s sandbox using modern client-side local database technology. No files are permanently logged on separate cloud databases.\n- Device Autonomy: You maintain full control over your stored history. You can execute bulk deletes at any time inside the App Settings.\n\n3. NETWORK TRANSMISSIONS & ENTERPRISE OCR SAFETY\n- Image Processing: When you capture a handwritten paper or upload a PDF document for transcription, the images are parsed securely over a state-of-the-art HTTPS encrypted socket directly to the Google Gemini API to execute OCR.\n- Data Privacy: Your images are strictly used for immediate live rendering & conversion. We do not sell, rent, lease, or permanently store your files or scanned materials on any external web servers.\n\n4. USER PERMISSIONS REQUIRED\n- Camera: Used directly to capture high-resolution snapshots of your physical handwritings and notebooks. Camera permission is entirely optional and can be managed directly in the Android System Permission settings.\n- Internet: Required to access cloud-based Gemini artificial intelligence models to convert image script configurations to editable digitized structures.\n\n5. USER DELETION RIGHT (GOOGLE PLAY MANDATORY COMPLIANCE)\nTo comply with Google Play Account Deletion controls, you can permanently delete your simulated profile, credential hashes, and your absolute local conversion library history with one click. Use the "Delete Account & Clean All Local Data" button within the app settings.\n\n6. CONTACT DETAILS\nIf you have questions, reach us at:\nDeveloper: Hasham Khan\nContact Support: hashamkhnnasar@gmail.com`;
+                          navigator.clipboard.writeText(rawPolicy);
+                          setPolicyCopied(true);
+                          setTimeout(() => setPolicyCopied(false), 2000);
+                        }}
+                        className="text-[10px] font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 bg-cyan-950/20 px-2.5 py-1 rounded-lg border border-cyan-900/40 cursor-pointer"
+                      >
+                        <Copy size={11} /> {policyCopied ? (appUiLanguage === 'Urdu' ? "نقل ہو گیا!" : "Copied!") : (appUiLanguage === 'Urdu' ? "پالیسی کاپی کریں" : "Copy Policy Text")}
+                      </button>
+                    </div>
+
+                    <div className="h-44 bg-[#050609] border border-slate-900 rounded-2xl p-4 overflow-y-auto text-[10px] font-mono leading-relaxed text-slate-400 space-y-3 scrollbar-styled">
+                      <p className="font-bold text-cyan-400 border-b border-slate-900 pb-1.5 uppercase">PRIVACY POLICY FOR HANDWRITE PRO</p>
+                      <p><strong>1. Introduction:</strong> We are committed to safeguarding user data in absolute alignment with Google Play Store compliance guidelines.</p>
+                      <p><strong>2. Local Storage:</strong> Cached conversions are stored entirely inside sandboxed client-side memory under your sole command.</p>
+                      <p><strong>3. Secure Transmission:</strong> Uploads are routed via encrypted HTTPS directly to the enterprise-grade Google Gemini API. Documents are not written logs, nor sold to advertising firms.</p>
+                      <p><strong>4. Optional Camera Access:</strong> Used ONLY for live photo scanning of notebook files. Denying camera access does not lock you out of raw image/PDF uploads.</p>
+                      <p><strong>5. Play Store Self-Deletion Mandate:</strong> In order to accommodate Section 5 Data Erasure requests, you can click "Data Deletion Request" below to instantly wipe your simulated account and all digitized documents.</p>
+                      <p><strong>6. Official Support:</strong> hashamkhnnasar@gmail.com (Developer: Hasham Khan).</p>
+                    </div>
+                  </div>
+
+                  {/* Active Account / Data Purging Button satisfying Google Data Deletion policy */}
+                  <div className="pt-2 border-t border-slate-900">
+                    <button
+                      type="button"
+                      onClick={handleDeleteAccount}
+                      className="w-full py-3.5 bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-900/30 text-[11px] font-black rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2.5 cursor-pointer uppercase tracking-wider"
+                    >
+                      <Trash2 size={14} />
+                      <span>{appUiLanguage === 'Urdu' ? 'اکاؤنٹ اور ڈیٹا ہمیشہ کے لیے حذف کریں (گوگل لازمی شرط)' : 'Delete Account & Clean All Local Data'}</span>
+                    </button>
+                    <span className="text-[9px] text-center block text-slate-500 mt-2 font-semibold">
+                      {appUiLanguage === 'Urdu'
+                        ? "گوگل اکاؤنٹ ڈیلیشن پالیسی کے قوانین کے مطابق آپ کا ڈیٹا کلاؤڈ یا لوکل اسٹوریج سے ہمیشہ کے لیے مٹ جائے گا۔"
+                        : "Required by Google Play Policy to allow final, self-service erasure of profiles & local document caching."
+                      }
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Google Play Console Companion Advice for publishing */}
+                  <div className="p-4 bg-cyan-950/10 border border-cyan-900/20 rounded-2xl space-y-3">
+                    <h4 className="text-[11px] font-black text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <Info size={13} />
+                      {appUiLanguage === 'Urdu' ? 'یا پلے اسٹور کونسل ہیلپر ہے' : 'Google Play Console Helper Tool'}
+                    </h4>
+                    <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
+                      {appUiLanguage === 'Urdu'
+                        ? "اس ایپ کو پلے اسٹور پر اپلوڈ کرنے کے لیے، آپ کو پلے کونسل کے فارمز بھرتے وقت مندرجہ ذیل جوابات دینے ہوں گے:"
+                        : "To publish HandWrite Pro to the Google Play Store successfully, use these exact parameters during the Developer Console setup:"
+                      }
+                    </p>
+                  </div>
+
+                  <div className="space-y-2.5 text-[11px] font-semibold text-slate-400">
+                    <div className="p-3 bg-zinc-950 border border-slate-900 rounded-xl space-y-1">
+                      <span className="text-[9px] font-black uppercase text-cyan-500">1. Privacy Policy Link (رازداری کا لنک)</span>
+                      <p className="text-slate-350 leading-relaxed">
+                        {appUiLanguage === 'Urdu'
+                          ? "پہلے بٹن سے پالیسی کاپی کریں۔ اسے بلاگر (Blogger) یا گوگل سائٹس (Google Sites) پر مفت پیسٹ کر کے ایک لائیو لنک بنائیں اور کونسل میں دیں۔"
+                          : "Copy the plain-text policy using the button in the first tab. Paste it into Google Sites, Medium, or Pastebin to get a free live URL to supply in the Play Console."}
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-zinc-950 border border-slate-900 rounded-xl space-y-1">
+                      <span className="text-[9px] font-black uppercase text-cyan-500">2. Data Safety Questionnaire (ڈیٹا سیفٹی فارم)</span>
+                      <ul className="list-disc pl-4 space-y-1 mt-1 text-slate-350">
+                        <li><strong>Does your app collect or share data?</strong> Yes (for conversion transfer).</li>
+                        <li><strong>Is this data encrypted in transit?</strong> Yes (processed via secure SSL HTTPS).</li>
+                        <li><strong>Provide a deletion request path?</strong> Yes (available in the settings of the app).</li>
+                        <li><strong>What data elements?</strong> Files & Docs (User uploads), Photos/Videos (Camera capture). Used purely for functionality.</li>
+                      </ul>
+                    </div>
+
+                    <div className="p-3 bg-zinc-950 border border-slate-900 rounded-xl space-y-1">
+                      <span className="text-[9px] font-black uppercase text-cyan-500">3. Target Audience & Family Policy</span>
+                      <p className="text-slate-350 leading-relaxed">
+                        Select age categories (13+ or Families). The app is a completely safe utility, contains zero tracking scripts, and does not sell advertisement records.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

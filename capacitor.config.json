@@ -1,0 +1,6 @@
+{
+  "appId": "com.hashamkhan.handwritepro",
+  "appName": "HandWrite Pro",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
